@@ -22,37 +22,39 @@ object JolPlugin extends sbt.AutoPlugin {
   override def trigger = allRequirements
 
   override def projectSettings = Seq(
-    vmDetails in jol <<= runVmDetailsTask(),
-
     run in jol <<= runJolTask(fullClasspath in Compile).dependsOn(compile in Compile),
+    
+    version in jol := "0.5",
+    
+    vmDetails in jol <<= runVmDetailsTask(),
     estimates in jol <<= runJolTask("estimates", fullClasspath in Compile).dependsOn(compile in Compile),
     externals in jol <<= runJolTask("externals", fullClasspath in Compile).dependsOn(compile in Compile),
     footprint in jol <<= runJolTask("footprint", fullClasspath in Compile).dependsOn(compile in Compile),
-    heapdump in jol <<= runJolTask("heapdump", fullClasspath in Compile).dependsOn(compile in Compile),
+    heapdump in jol  <<= runJolTask("heapdump",  fullClasspath in Compile).dependsOn(compile in Compile),
     idealpack in jol <<= runJolTask("idealpack", fullClasspath in Compile).dependsOn(compile in Compile),
     internals in jol <<= runJolTask("internals", fullClasspath in Compile).dependsOn(compile in Compile),
     // TODO: stringCompress in jol <<= runJolTask("string-compress", fullClasspath in Compile).dependsOn(compile in Compile),
 
     discoveredClasses in jol := Seq.empty,
     discoveredClasses in jol <<= (compile in Compile) map discoverAllClasses storeAs (discoveredClasses in jol) triggeredBy (compile in Compile)
-  )
+  )  
 
   def runJolTask(classpath: Initialize[Task[Classpath]]): Initialize[InputTask[Unit]] = {
     val parser = loadForParser(discoveredClasses in jol)((s, names) => runJolModesParser(s, modes, names getOrElse Nil))
     Def.inputTask {
       val (mode, className, args) = parser.parsed
-      runJol(streams.value.log, classpath.value, mode :: className :: args.toList)
+      runJol(streams.value.log, ivySbt.value, (version in jol).value, classpath.value, mode :: className :: args.toList)
     }
   }
   def runJolTask(mode: String, classpath: Initialize[Task[Classpath]]): Initialize[InputTask[Unit]] = {
     val parser = loadForParser(discoveredClasses in jol)((s, names) => runJolParser(s, names getOrElse Nil))
     Def.inputTask {
       val (className, args) = parser.parsed
-      runJol(streams.value.log, classpath.value, mode :: className :: args.toList)
+      runJol(streams.value.log, ivySbt.value, (version in jol).value, classpath.value, mode :: className :: args.toList)
     }
   }
 
-  def runJol(log: Logger, classpath: Classpath, args: Seq[String]): Unit = {
+  def runJol(log: Logger, ivySbt: IvySbt, jolVersion: String, classpath: Classpath, args: Seq[String]): Unit = {
     val cpFiles = classpath.map(_.data)
 
     // TODO not needed, but at least confirms HERE we're able to see the class, sadly if we call JOL classes they won't...  
@@ -61,16 +63,54 @@ object JolPlugin extends sbt.AutoPlugin {
     //      val clazz = loader.loadClass(className) // make sure we can load it
     //      Thread.currentThread().setContextClassLoader(loader)
 
-    val allArg = s"${args.mkString(" ")} ${cpOption(cpFiles)}"
+    val jolCoreJar = getArtifact("org.openjdk.jol" % "jol-core" % jolVersion, ivySbt, log)
+    val jolCliJar = getArtifact("org.openjdk.jol" % "jol-cli" % jolVersion, ivySbt, log)
+    val joptJar = getArtifact("net.sf.jopt-simple" % "jopt-simple" % "4.6", ivySbt, log) // TODO could be more nicely exposed as options
+    val jolDeps = jolCliJar :: jolCoreJar :: joptJar :: Nil
+    
+    val allArg = s"${args.mkString(" ")} ${cpOption(cpFiles.toList)}"
     log.debug(s"jol: $allArg")
 
     import scala.sys.process._
-    val output = s"java -jar /Users/ktoso/jol-cli-0.5-full.jar $allArg".!!
+    val javaClasspath = jolDeps.mkString(":") + ":" + cpFiles.toList.mkString(":")
+    println("javaClasspath = \n    " + javaClasspath)  
+    val output = s"java -cp $javaClasspath org.openjdk.jol.Main $allArg".!!(new ProcessLogger {
+      override def buffer[T](f: => T): T = f
+      override def out(s: => String): Unit = log.info(s)  
+      override def err(s: => String): Unit = log.error(s)  
+    })
     log.info(output)
     // TODO if anyone can figure out how to make jol not fail with ClassNotFound here that'd be grand (its tricky as it really wants to use the system loader...)  
     //      org.openjdk.jol.Main.main("estimates", className, cpOption(cpFiles))
   }
 
+  /** 
+   * From typesafehub/migration-manager (apache v2 licensed).
+   * Resolves an artifact representing the previous abstract binary interface for testing.
+   */
+  def getArtifact(m: ModuleID, ivy: IvySbt, log: Logger): File = {
+    val moduleSettings = InlineConfiguration(
+      "dummy" % "test" % "version",
+      ModuleInfo("dummy-test-project-for-resolving"),
+      dependencies = Seq(m))
+    val module = new ivy.Module(moduleSettings)
+    val report = IvyActions.update(
+      module,
+      new UpdateConfiguration(
+        retrieve = None,
+        missingOk = false,
+        logging = UpdateLogging.DownloadOnly),
+      log)
+    val optFile = (for {
+      config <- report.configurations
+      module <- config.modules
+      (artifact, file) <- module.artifacts
+      // TODO - Hardcode this?
+      if artifact.name == m.name
+    } yield file).headOption
+    optFile getOrElse sys.error("Could not resolve JOL artifact: " + m)
+  }
+  
   private def cpOption(cpFiles: Seq[File]): String = 
     "-cp " + cpFiles.mkString(":")  
   
@@ -105,7 +145,7 @@ object JolPlugin extends sbt.AutoPlugin {
   )
 
   object autoImport {
-    final val jol = sbt.config("jol") extend sbt.Compile
+    final val jol = sbt.config("jol") extend sbt.Configurations.CompileInternal  
     
     lazy val vmDetails = inputKey[Unit]("Show vm details")
 
