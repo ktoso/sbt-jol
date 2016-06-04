@@ -15,6 +15,7 @@ Get the latest via:
  
  ```
  > jol:internals example.Entry
+ 
 [info] # Running 64-bit HotSpot VM.
 [info] # Using compressed oop with 3-bit shift.
 [info] # Using compressed klass with 3-bit shift.
