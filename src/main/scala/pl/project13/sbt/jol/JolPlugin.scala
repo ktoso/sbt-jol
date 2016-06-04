@@ -73,7 +73,6 @@ object JolPlugin extends sbt.AutoPlugin {
 
     import scala.sys.process._
     val javaClasspath = jolDeps.mkString(":") + ":" + cpFiles.toList.mkString(":")
-    println("javaClasspath = \n    " + javaClasspath)  
     val output = s"java -cp $javaClasspath org.openjdk.jol.Main $allArg".!!(new ProcessLogger {
       override def buffer[T](f: => T): T = f
       override def out(s: => String): Unit = log.info(s)  

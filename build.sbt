@@ -29,17 +29,5 @@ bintrayPublishSettings
 repository in bintray := "sbt-plugins"
 bintrayOrganization in bintray := None
 
-pomExtra := <scm>
-  <url>git@github.com:ktoso/sbt-jol.git</url>
-  <connection>scm:git:git@github.com:ktoso/sbt-jol.git</connection>
-</scm>
-  <developers>
-    <developer>
-      <id>ktoso</id>
-      <name>Konrad 'ktoso' Malawski</name>
-      <url>http://kto.so</url>
-    </developer>
-  </developers>
-
 scriptedSettings
 scriptedLaunchOpts <+= version(v => s"-Dproject.version=$v")
