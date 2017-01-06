@@ -17,8 +17,8 @@ scalacOptions ++= List(
 libraryDependencies += Dependencies.jol
 libraryDependencies += Dependencies.jolCli
 
-publishTo <<= isSnapshot { snapshot =>
-  if (snapshot) Some(Classpaths.sbtPluginSnapshots) else Some(Classpaths.sbtPluginReleases)
+publishTo := {
+  if (isSnapshot.value) Some(Classpaths.sbtPluginSnapshots) else Some(Classpaths.sbtPluginReleases)
 }
 
 // publishing settings
@@ -30,4 +30,4 @@ repository in bintray := "sbt-plugins"
 bintrayOrganization in bintray := None
 
 scriptedSettings
-scriptedLaunchOpts <+= version(v => s"-Dproject.version=$v")
+scriptedLaunchOpts += s"-Dproject.version=${version.value}"

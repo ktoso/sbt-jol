@@ -22,20 +22,22 @@ object JolPlugin extends sbt.AutoPlugin {
   override def trigger = allRequirements
 
   override def projectSettings = Seq(
-    run in jol <<= runJolTask(fullClasspath in Compile).dependsOn(compile in Compile),
+    run in jol := runJolTask(fullClasspath in Compile).dependsOn(compile in Compile).evaluated,
     
     version in jol := "0.5",
     
-    vmDetails in jol <<= runVmDetailsTask(),
-    estimates in jol <<= runJolTask("estimates", fullClasspath in Compile).dependsOn(compile in Compile),
-    externals in jol <<= runJolTask("externals", fullClasspath in Compile).dependsOn(compile in Compile),
-    footprint in jol <<= runJolTask("footprint", fullClasspath in Compile).dependsOn(compile in Compile),
-    heapdump in jol  <<= runJolTask("heapdump",  fullClasspath in Compile).dependsOn(compile in Compile),
-    idealpack in jol <<= runJolTask("idealpack", fullClasspath in Compile).dependsOn(compile in Compile),
-    internals in jol <<= runJolTask("internals", fullClasspath in Compile).dependsOn(compile in Compile),
+    vmDetails in jol := runVmDetailsTask().evaluated,
+    estimates in jol := runJolTask("estimates", fullClasspath in Compile).dependsOn(compile in Compile).evaluated,
+    externals in jol := runJolTask("externals", fullClasspath in Compile).dependsOn(compile in Compile).evaluated,
+    footprint in jol := runJolTask("footprint", fullClasspath in Compile).dependsOn(compile in Compile).evaluated,
+    heapdump in jol  := runJolTask("heapdump",  fullClasspath in Compile).dependsOn(compile in Compile).evaluated,
+    idealpack in jol := runJolTask("idealpack", fullClasspath in Compile).dependsOn(compile in Compile).evaluated,
+    internals in jol := runJolTask("internals", fullClasspath in Compile).dependsOn(compile in Compile).evaluated,
     // TODO: stringCompress in jol <<= runJolTask("string-compress", fullClasspath in Compile).dependsOn(compile in Compile),
 
     discoveredClasses in jol := Seq.empty,
+    // TODO tab auto-completion break if use `:=` and `.value`
+    // https://github.com/sbt/sbt/issues/1444
     discoveredClasses in jol <<= (compile in Compile) map discoverAllClasses storeAs (discoveredClasses in jol) triggeredBy (compile in Compile)
   )  
 
