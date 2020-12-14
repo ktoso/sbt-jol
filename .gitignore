@@ -5,6 +5,7 @@
 .idea/
 .idea_modules/
 
+.bsp
 target/
 lib_managed/
 src_managed/

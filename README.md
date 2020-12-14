@@ -1,14 +1,12 @@
 # sbt-jol
 
-[ ![Download](https://api.bintray.com/packages/ktosopl/sbt-plugins/sbt-jol/images/download.svg) ](https://bintray.com/ktosopl/sbt-plugins/sbt-jol/_latestVersion)
-
 Trivial way to inspect OpenJDK's [*Java Object Layout*](http://openjdk.java.net/projects/code-tools/jol/) of your Scala classes.
 
 Get the latest via:
 
  ```
  // project/plugins.sbt
- addSbtPlugin("pl.project13.sbt" % "sbt-jol" % pluginVersionHere)
+ addSbtPlugin("pl.project13.sbt" % "sbt-jol" % "0.1.4")
  ```
  
  Which allows you to (note auto-completion works nicely):
